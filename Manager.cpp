@@ -5,6 +5,7 @@
 #include "keyboard.h"
 #include "Game.h"
 
+
 static SCENE g_Scene = SCENE_NONE;
 
 void InitManager()

@@ -9,7 +9,7 @@
 #include "texture.h"
 
 #include	"Sprite2D.h"
-
+#include "wall.h"
 #include	"Field3D.h"
 #include	"PolygonModel.h"
 #include	"VertexDirectionalLighting.h"
@@ -29,6 +29,9 @@ VertexDirectionalLighting	VDLModel;
 PixelDirectionalLighting	PDLModel;
 PixelLightingBlinnPhong		PLBModel;
 HemiSphereLighting			HSLModel;
+
+
+Wall g_Wall;
 
 //ポーズフラグ
 static	bool	pause = false;
@@ -52,7 +55,6 @@ void InitGame()
 {
 	TextureInitialize(GetDevice());
 	InitCamera();
-
 	test2D.Init();
 
 	Field.Init();
@@ -61,6 +63,7 @@ void InitGame()
 	PDLModel.Init();
 	PLBModel.Init();
 	HSLModel.Init();
+	g_Wall.Init();
 }
 
 //===============================================
@@ -76,7 +79,7 @@ void FinalizeGame()
 	PDLModel.Finalize();
 	PLBModel.Finalize();
 	HSLModel.Finalize();
-
+	g_Wall.Uninit();
 
 	TextureFinalize();
 }
@@ -97,7 +100,7 @@ void UpdateGame()
 		PDLModel.Update();
 		PLBModel.Update();
 		HSLModel.Update();
-
+		g_Wall.Update();
 	}
 
 }
@@ -123,6 +126,6 @@ void DrawGame()
 		PDLModel.Draw();
 		PLBModel.Draw();
 		HSLModel.Draw();
-
+		g_Wall.Draw();
 	}
 }
