@@ -127,11 +127,13 @@ void SetProjectionMatrix( XMMATRIX ProjectionMatrix )
 
 
 
-void SetMaterial( MATERIAL Material )
+void SetMaterial(MATERIAL Material)
 {
+	GetDeviceContext()->UpdateSubresource(g_MaterialBuffer, 0, NULL, &Material, 0, 0);
 
-	GetDeviceContext()->UpdateSubresource( g_MaterialBuffer, 0, NULL, &Material, 0, 0 );
-
+	// ★追加：頂点シェーダーだけでなく、ピクセルシェーダーにも確実にマテリアルを送る
+	GetDeviceContext()->VSSetConstantBuffers(3, 1, &g_MaterialBuffer);
+	GetDeviceContext()->PSSetConstantBuffers(3, 1, &g_MaterialBuffer);
 }
 
 void SetCameraPosition(XMFLOAT3 CameraPosition)
@@ -318,6 +320,8 @@ HRESULT InitRenderer(HINSTANCE hInstance, HWND hWnd, BOOL bWindow)
 	g_D3DDevice->CreateBuffer(&hBufferDesc, NULL, &g_WorldBuffer);
 	g_ImmediateContext->VSSetConstantBuffers(0, 1, &g_WorldBuffer);
 
+	g_ImmediateContext->PSSetConstantBuffers(3, 1, &g_MaterialBuffer);
+
 	g_D3DDevice->CreateBuffer(&hBufferDesc, NULL, &g_ViewBuffer);
 	g_ImmediateContext->VSSetConstantBuffers(1, 1, &g_ViewBuffer);
 
@@ -385,9 +389,8 @@ void FinalizeRenderer(void)
 void Clear(void)
 {
 	// バックバッファクリア色
-	float ClearColor[4] = { 0.4f, 0.2f, 0.2f, 1.0f };//純黒は避ける
-	//バックバッファをクリア
-	g_ImmediateContext->ClearRenderTargetView( g_RenderTargetView, ClearColor );
+	float ClearColor[4] = { 0.05f, 0.05f, 0.15f, 1.0f };
+	g_ImmediateContext->ClearRenderTargetView(g_RenderTargetView, ClearColor);
 	//デプスステンシルバッファをクリア
 	g_ImmediateContext->ClearDepthStencilView( g_DepthStencilView, D3D11_CLEAR_DEPTH, 1.0f, 0);
 }
@@ -410,6 +413,12 @@ void CreateVertexShader(ID3D11VertexShader** VertexShader, ID3D11InputLayout** V
 	long int fsize;
 
 	file = fopen(FileName, "rb");
+
+	if (file == NULL) {
+		MessageBoxA(NULL, FileName, "シェーダーファイルが見つかりません", MB_OK | MB_ICONERROR);
+		return;
+	}
+
 	fsize = _filelength(_fileno(file));
 	unsigned char* buffer = new unsigned char[fsize];
 	fread(buffer, fsize, 1, file);
@@ -445,6 +454,12 @@ void CreatePixelShader(ID3D11PixelShader** PixelShader, const char* FileName)
 	long int fsize;
 
 	file = fopen(FileName, "rb");
+
+	if (file == NULL) {
+		MessageBoxA(NULL, FileName, "シェーダーファイルが見つかりません", MB_OK | MB_ICONERROR);
+		return;
+	}
+
 	fsize = _filelength(_fileno(file));
 	unsigned char* buffer = new unsigned char[fsize];
 	fread(buffer, fsize, 1, file);
@@ -460,3 +475,63 @@ void SetLight(LIGHT Light)
 	g_ImmediateContext->UpdateSubresource(g_LightBuffer, 0, NULL, &Light, 0, 0);
 }
 
+// ============================================================================
+// Render Target 関連（ブルームなどのポストエフェクト用）
+// ============================================================================
+
+// 指定したサイズの描画用テクスチャ（RTV）と、それをシェーダーで読み込むためのビュー（SRV）を作成する
+HRESULT CreateRenderTarget(int width, int height, ID3D11RenderTargetView** rtv, ID3D11ShaderResourceView** srv)
+{
+	HRESULT hr = S_OK;
+	ID3D11Texture2D* texture = nullptr;
+
+	D3D11_TEXTURE2D_DESC td = {};
+	td.Width = width;
+	td.Height = height;
+	td.MipLevels = 1;
+	td.ArraySize = 1;
+	// ポストエフェクト用に、16bit浮動小数点フォーマット（HDR対応）にするのが理想ですが、
+	// まずは通常の 8bit UNORM フォーマットで作成します。
+	td.Format = DXGI_FORMAT_R16G16B16A16_FLOAT;
+	td.SampleDesc.Count = 1;
+	td.SampleDesc.Quality = 0;
+	td.Usage = D3D11_USAGE_DEFAULT;
+	td.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
+
+	hr = g_D3DDevice->CreateTexture2D(&td, nullptr, &texture);
+	if (FAILED(hr)) return hr;
+
+	hr = g_D3DDevice->CreateRenderTargetView(texture, nullptr, rtv);
+	if (FAILED(hr)) { texture->Release(); return hr; }
+
+	hr = g_D3DDevice->CreateShaderResourceView(texture, nullptr, srv);
+	if (FAILED(hr)) { texture->Release(); (*rtv)->Release(); return hr; }
+
+	texture->Release(); // RTVとSRVが参照を持っているので本体はReleaseしてOK
+	return S_OK;
+}
+
+// 描画先を変更する
+void SetRenderTarget(ID3D11RenderTargetView* rtv, ID3D11DepthStencilView* dsv)
+{
+	g_ImmediateContext->OMSetRenderTargets(1, &rtv, dsv);
+}
+
+// 描画先をクリアする
+void ClearRenderTarget(ID3D11RenderTargetView* rtv, ID3D11DepthStencilView* dsv)
+{
+	float clearColor[4] = { 0.05f, 0.05f, 0.15f, 1.0f };
+	if (rtv) g_ImmediateContext->ClearRenderTargetView(rtv, clearColor);
+	if (dsv) g_ImmediateContext->ClearDepthStencilView(dsv, D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
+}
+
+// 本来の画面（バックバッファ）に描画先を戻す
+void RestoreRenderTarget()
+{
+	g_ImmediateContext->OMSetRenderTargets(1, &g_RenderTargetView, g_DepthStencilView);
+}
+
+ID3D11DepthStencilView* GetDepthStencilView()
+{
+	return g_DepthStencilView;
+}

@@ -1,37 +1,161 @@
+//#include "Main.h"
+//#include "Renderer.h"
+//#include "Manager.h"
+//#include "Sprite.h"
+//#include "Game.h"
+//#include "keyboard.h"
+//#include "Camera.h"
+//#include "texture.h"
+//#include "PostEffect.h"
+//
+//#include	"Sprite2D.h"
+//#include "wall.h"
+//#include	"Field3D.h"
+//#include	"PolygonModel.h"
+//#include	"VertexDirectionalLighting.h"
+//#include	"PixelDirectionalLighting.h"
+//#include	"PixelLightingBlinnPhong.h"
+//#include	"HemiSphereLighting.h"
+//
+////===============================================
+////グローバル変数
+// 
+//Camera		CameraObject;
+//Sprite2D	test2D;
+//
+//Field3D			Field;
+//PolygonModel	Model;
+//VertexDirectionalLighting	VDLModel;
+//PixelDirectionalLighting	PDLModel;
+//PixelLightingBlinnPhong		PLBModel;
+//HemiSphereLighting			HSLModel;
+//
+//
+//Wall g_Wall;
+//PostEffect g_PostEffect;
+//
+////ポーズフラグ
+//static	bool	pause = false;
+//
+////===============================================
+////ポーズフラグセット
+//void	SetPause(bool flg)
+//{
+//	pause = flg;
+//}
+////===============================================
+////ポーズフラグ取得
+//bool	GetPause()
+//{
+//	return pause;
+//}
+//
+////===============================================
+////ゲームシーン初期化
+//void InitGame()
+//{
+//	TextureInitialize(GetDevice());
+//	InitCamera();
+//	test2D.Init();
+//
+//	Field.Init();
+//	Model.Init();
+//	VDLModel.Init();
+//	PDLModel.Init();
+//	PLBModel.Init();
+//	HSLModel.Init();
+//	g_Wall.Init();
+//	g_PostEffect.Init();
+//}
+//
+////===============================================
+////ゲームシーン終了
+//void FinalizeGame()
+//{
+//	FinalizeCamera();
+//	test2D.Finalize();
+//
+//	g_PostEffect.Uninit();
+//	Field.Finalize();
+//	Model.Finalize();
+//	VDLModel.Finalize();
+//	PDLModel.Finalize();
+//	PLBModel.Finalize();
+//	HSLModel.Finalize();
+//	g_Wall.Uninit();
+//
+//	TextureFinalize();
+//}
+//
+////===============================================
+////ゲームシーン更新
+//void UpdateGame()
+//{
+//
+//	if (GetPause() == false)//ポーズ中でなければ更新実行
+//	{
+//		UpdateCamera();
+//		test2D.Update();
+//
+//		Field.Update();
+//		Model.Update();
+//		VDLModel.Update();
+//		PDLModel.Update();
+//		PLBModel.Update();
+//		HSLModel.Update();
+//		g_Wall.Update();
+//	}
+//
+//}
+//
+////===============================================
+////ゲームシーン描画
+//void DrawGame()
+//{
+//
+//	// 2D用マトリクス設定
+//	{
+//		SetWorldViewProjection2D();
+//		test2D.Draw();
+//	}
+//	//3D用マトリクス設定
+//	{
+//		g_PostEffect.BeginRenderScene();
+//		SetDepthEnable(true);		//奥行き処理有効
+//		DrawCamera();
+//
+//		Field.Draw();
+//		Model.Draw();
+//		VDLModel.Draw();
+//		PDLModel.Draw();
+//		PLBModel.Draw();
+//		HSLModel.Draw();
+//		g_Wall.Draw();
+//		g_PostEffect.EndRenderScene();
+//		SetWorldViewProjection2D();
+//		test2D.Draw();
+//	}
+//}
+
+
 #include "Main.h"
 #include "Renderer.h"
 #include "Manager.h"
-#include "Sprite.h"
-#include "Game.h"
 #include "keyboard.h"
-#include "Manager.h"
 #include "Camera.h"
 #include "texture.h"
 
-#include	"Sprite2D.h"
-#include "wall.h"
-#include	"Field3D.h"
-#include	"PolygonModel.h"
-#include	"VertexDirectionalLighting.h"
-#include	"PixelDirectionalLighting.h"
-#include	"PixelLightingBlinnPhong.h"
-#include	"HemiSphereLighting.h"
-
-//===============================================
-//グローバル変数
- 
-Camera		CameraObject;
-Sprite2D	test2D;
-
-Field3D			Field;
-PolygonModel	Model;
-VertexDirectionalLighting	VDLModel;
-PixelDirectionalLighting	PDLModel;
-PixelLightingBlinnPhong		PLBModel;
-HemiSphereLighting			HSLModel;
+// 必要なものだけインクルード
+#include "Field3D.h"
+#include "IronSphere.h"
+#include "PostEffect.h"
 
 
-Wall g_Wall;
+
+Camera CameraObject;
+Field3D Field;          // 床
+IronSphere Sphere;      // 鉄球
+PostEffect g_PostEffect;
 
 //ポーズフラグ
 static	bool	pause = false;
@@ -49,83 +173,49 @@ bool	GetPause()
 	return pause;
 }
 
-//===============================================
-//ゲームシーン初期化
+
 void InitGame()
 {
-	TextureInitialize(GetDevice());
-	InitCamera();
-	test2D.Init();
+    TextureInitialize(GetDevice());
+    InitCamera();
 
-	Field.Init();
-	Model.Init();
-	VDLModel.Init();
-	PDLModel.Init();
-	PLBModel.Init();
-	HSLModel.Init();
-	g_Wall.Init();
+    Field.Init();
+    Sphere.Init();
+    g_PostEffect.Init();
 }
 
-//===============================================
-//ゲームシーン終了
 void FinalizeGame()
 {
-	FinalizeCamera();
-	test2D.Finalize();
+    g_PostEffect.Uninit();
+    Sphere.Finalize();
+    Field.Finalize();
 
-	Field.Finalize();
-	Model.Finalize();
-	VDLModel.Finalize();
-	PDLModel.Finalize();
-	PLBModel.Finalize();
-	HSLModel.Finalize();
-	g_Wall.Uninit();
-
-	TextureFinalize();
+    FinalizeCamera();
+    TextureFinalize();
 }
 
-//===============================================
-//ゲームシーン更新
 void UpdateGame()
 {
-
-	if (GetPause() == false)//ポーズ中でなければ更新実行
-	{
-		UpdateCamera();
-		test2D.Update();
-
-		Field.Update();
-		Model.Update();
-		VDLModel.Update();
-		PDLModel.Update();
-		PLBModel.Update();
-		HSLModel.Update();
-		g_Wall.Update();
-	}
-
+    if (GetPause() == false)
+    {
+        UpdateCamera();
+        Field.Update();
+        Sphere.Update();
+    }
 }
 
-//===============================================
-//ゲームシーン描画
 void DrawGame()
 {
+    // --- ブルーム用にテクスチャへの描画を開始 ---
+    g_PostEffect.BeginRenderScene();
 
-	// 2D用マトリクス設定
-	{
-		SetWorldViewProjection2D();
-		test2D.Draw();
-	}
-	//3D用マトリクス設定
-	{
-		SetDepthEnable(true);		//奥行き処理有効
-		DrawCamera();
+    // 3D描画
+    SetDepthEnable(true);
+    DrawCamera();
 
-		Field.Draw();
-		Model.Draw();
-		VDLModel.Draw();
-		PDLModel.Draw();
-		PLBModel.Draw();
-		HSLModel.Draw();
-		g_Wall.Draw();
-	}
+    Field.Draw();
+    Sphere.Draw();
+
+    // --- ブルーム処理を実行し、画面に出力 ---
+    g_PostEffect.EndRenderScene();
 }

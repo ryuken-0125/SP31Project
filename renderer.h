@@ -51,11 +51,24 @@ struct LIGHT
 
 };
 
+struct PostEffectConstantBuffer 
+{
+	float threshold; // 輝度抽出のしきい値
+	float weight[8]; // ガウシアンブラーの重み
+	float padding[3]; // 16byteアライメント用
+};
+
 //*****************************************************************************
 // プロトタイプ宣言
 //*****************************************************************************
 HRESULT InitRenderer(HINSTANCE hInstance, HWND hWnd, BOOL bWindow);
 void FinalizeRenderer(void);
+
+HRESULT CreateRenderTarget(int width, int height, ID3D11RenderTargetView** rtv, ID3D11ShaderResourceView** srv);
+void SetRenderTarget(ID3D11RenderTargetView* rtv, ID3D11DepthStencilView* dsv);
+void ClearRenderTarget(ID3D11RenderTargetView* rtv, ID3D11DepthStencilView* dsv);
+void RestoreRenderTarget(); // 本来の画面（バックバッファ）に戻す
+ID3D11DepthStencilView* GetDepthStencilView(); // 深度バッファ取得用
 
 void Clear(void);
 void Present(void);

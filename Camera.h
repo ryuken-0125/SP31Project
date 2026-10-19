@@ -16,10 +16,11 @@ public:
 	float		Farclip;		//どこまで遠くが見えるか
 	float		Rotation;
 
-	// --- マウス操作用の変数を追加 ---
 	float		AngleX;			//縦の回転角度
 	float		AngleY;			//横の回転角度
 	POINT		OldCursorPos;	//1フレーム前のマウス座標
+
+	float		Radius;			// ★ 追加：カメラと注視点の距離（ズーム用）
 };
 
 void	InitCamera();
